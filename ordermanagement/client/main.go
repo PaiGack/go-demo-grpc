@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
 	pb "ordermanagement/proto"
 	"time"
@@ -32,4 +33,14 @@ func main() {
 		log.Fatalf("Could not get order: %v", err)
 	}
 	log.Printf("Order: %s", order.String())
+
+	// stream
+	searchStream, _ := c.SearchOrders(ctx, &wrapperspb.StringValue{Value: "b"})
+	for {
+		searchOrder, err := searchStream.Recv()
+		if err == io.EOF {
+			break
+		}
+		log.Printf("Search Result: %v, err: %v", searchOrder, err)
+	}
 }
