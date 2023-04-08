@@ -43,4 +43,32 @@ func main() {
 		}
 		log.Printf("Search Result: %v, err: %v", searchOrder, err)
 	}
+
+	// update order
+	updateStream, err := c.UpdateOrders(ctx)
+	if err != nil {
+		log.Fatalf("%v.UpdateOrders(_)= _, %v", c, err)
+	}
+
+	updOrder1 := pb.Order{Id: "abcd", Name: "u1"}
+	updOrder2 := pb.Order{Id: "abcd-2", Name: "u2"}
+	updOrder3 := pb.Order{Id: "abcd-3", Name: "u3"}
+	// update order1
+	if err := updateStream.Send(&updOrder1); err != nil {
+		log.Fatalf("%v.Send(%v) = %v", updateStream, updOrder1, err)
+	}
+
+	if err := updateStream.Send(&updOrder2); err != nil {
+		log.Fatalf("%v.Send(%v) = %v", updateStream, updOrder2, err)
+	}
+
+	if err := updateStream.Send(&updOrder3); err != nil {
+		log.Fatalf("%v.Send(%v) = %v", updateStream, updOrder3, err)
+	}
+
+	updateRes, err := updateStream.CloseAndRecv()
+	if err != nil {
+		log.Fatalf("%v.CloseAndRecv() got error %v, want %v", updateStream, err, nil)
+	}
+	log.Printf("Update orders Res: %s", updateRes)
 }
