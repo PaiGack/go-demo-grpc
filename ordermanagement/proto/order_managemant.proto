@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+
+option go_package = "ordermanagement/proto";
+option java_multiple_files = true;
+option java_package = "pai.examples.proto";
+option java_outer_classname = "proto";
+
+service OrderManagement {
+    rpc getOrder(google.protobuf.StringValue) returns (Order);
+}
+
+message Order {
+    string id = 1;
+    repeated string items = 2;
+    string name = 3;
+    float price = 4;
+    string description = 5;
+}
