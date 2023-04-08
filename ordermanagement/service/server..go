@@ -23,14 +23,24 @@ type server struct {
 func NewServerDeafult() *server {
 	svc := server{}
 	svc.orderMap = make(map[string]*pb.Order, 0)
-	svc.orderMap["abcd"] = &pb.Order{Id: "abcd", Items: []string{"a", "b", "c", "d"}, Name: "abcd", Price: 123.4, Description: "Description"}
-	svc.orderMap["abcd-2"] = &pb.Order{Id: "abcd", Items: []string{"b", "c", "d"}, Name: "bcd", Price: 123.4, Description: "Description"}
-	svc.orderMap["abcd-3"] = &pb.Order{Id: "abcd", Items: []string{"c", "d"}, Name: "cd", Price: 123.4, Description: "Description"}
-	svc.orderMap["abcd-4"] = &pb.Order{Id: "abcd", Items: []string{"d"}, Name: "d", Price: 123.4, Description: "Description"}
+
+	svc.orderMap["102"] = &pb.Order{Id: "102", Items: []string{"Google Pixel 3A", "Mac Book Pro"}, Destination: "Mountain View, CA", Price: 1800.00}
+	svc.orderMap["103"] = &pb.Order{Id: "103", Items: []string{"Apple Watch S4"}, Destination: "San Jose, CA", Price: 400.00}
+	svc.orderMap["104"] = &pb.Order{Id: "104", Items: []string{"Google Home Mini", "Google Nest Hub"}, Destination: "Mountain View, CA", Price: 400.00}
+	svc.orderMap["105"] = &pb.Order{Id: "105", Items: []string{"Amazon Echo"}, Destination: "San Jose, CA", Price: 30.00}
+	svc.orderMap["106"] = &pb.Order{Id: "106", Items: []string{"Amazon Echo", "Apple iPhone XS"}, Destination: "Mountain View, CA", Price: 300.00}
 
 	return &svc
 }
 
+// Simple RPC
+func (s *server) AddOrder(ctx context.Context, req *pb.Order) (*wrapperspb.StringValue, error) {
+	log.Printf("Order Added. ID : %v", req.Id)
+	s.orderMap[req.Id] = req
+	return &wrapperspb.StringValue{Value: "Order Added: " + req.Id}, nil
+}
+
+// Simple RPC
 func (s *server) GetOrder(ctx context.Context, req *wrapperspb.StringValue) (*pb.Order, error) {
 	if s.orderMap == nil {
 		return nil, status.Errorf(codes.Internal, "Error while get order")
@@ -42,6 +52,7 @@ func (s *server) GetOrder(ctx context.Context, req *wrapperspb.StringValue) (*pb
 	return order, status.New(codes.OK, "").Err()
 }
 
+// Server-side Streaming RPC
 func (s *server) SearchOrders(req *wrapperspb.StringValue, stream pb.OrderManagement_SearchOrdersServer) error {
 	for key, order := range s.orderMap {
 		log.Print(key, order)
@@ -60,6 +71,7 @@ func (s *server) SearchOrders(req *wrapperspb.StringValue, stream pb.OrderManage
 	return nil
 }
 
+// Client-side Streaming RPC
 func (s *server) UpdateOrders(stream pb.OrderManagement_UpdateOrdersServer) error {
 	ordersStr := "Update Order Ids: "
 	for {
@@ -72,5 +84,60 @@ func (s *server) UpdateOrders(stream pb.OrderManagement_UpdateOrdersServer) erro
 
 		log.Printf("Order ID %s Updated", order.Id)
 		ordersStr += order.Id + ", "
+	}
+}
+
+// Bi-directional Streaming RPC
+func (s *server) ProcessOrders(stream pb.OrderManagement_ProcessOrdersServer) error {
+	batchMarker := 1
+	orderBatchSize := 3
+
+	var combinedShipmentMap = make(map[string]pb.CombinedShipment)
+	for {
+		orderId, err := stream.Recv()
+		log.Printf("Reading Proc order : %s", orderId)
+		if err == io.EOF {
+			// Client has sent all the messages
+			// Send remaining shipments
+			log.Printf("EOF : %s", orderId)
+			for _, shipment := range combinedShipmentMap {
+				if err := stream.Send(&shipment); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+
+		destination := s.orderMap[orderId.GetValue()].Destination
+		shipment, found := combinedShipmentMap[destination]
+
+		if found {
+			ord := s.orderMap[orderId.GetValue()]
+			shipment.OrdersList = append(shipment.OrdersList, ord)
+			combinedShipmentMap[destination] = shipment
+		} else {
+			comShip := pb.CombinedShipment{Id: "cmb - " + (s.orderMap[orderId.GetValue()].Destination), Status: "Processed!"}
+			ord := s.orderMap[orderId.GetValue()]
+			comShip.OrdersList = append(shipment.OrdersList, ord)
+			combinedShipmentMap[destination] = comShip
+			log.Print(len(comShip.OrdersList), comShip.GetId())
+		}
+
+		if batchMarker == orderBatchSize {
+			for _, comb := range combinedShipmentMap {
+				log.Printf("Shipping : %v -> %v", comb.Id, len(comb.OrdersList))
+				if err := stream.Send(&comb); err != nil {
+					return err
+				}
+			}
+			batchMarker = 0
+			combinedShipmentMap = make(map[string]pb.CombinedShipment)
+		} else {
+			batchMarker++
+		}
 	}
 }
