@@ -17,7 +17,11 @@ const (
 )
 
 func main() {
-	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(
+		address,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(orderUnaryClientInterceptor),
+	)
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
