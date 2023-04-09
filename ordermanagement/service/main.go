@@ -18,7 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer()
+	s := grpc.NewServer(grpc.UnaryInterceptor(orderUnaryServerInterceptor))
 	pb.RegisterOrderManagementServer(s, NewServerDeafult())
 
 	log.Printf("Starting gRPC listener on port: %s", port)

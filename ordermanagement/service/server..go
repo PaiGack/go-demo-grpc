@@ -9,6 +9,7 @@ import (
 
 	pb "ordermanagement/proto"
 
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -140,4 +141,13 @@ func (s *server) ProcessOrders(stream pb.OrderManagement_ProcessOrdersServer) er
 			batchMarker++
 		}
 	}
+}
+
+func orderUnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	log.Println("====== [Server Interceptor] ", info.FullMethod)
+
+	m, err := handler(ctx, req)
+
+	log.Printf(" Post Proc Message: %s", m)
+	return m, err
 }
