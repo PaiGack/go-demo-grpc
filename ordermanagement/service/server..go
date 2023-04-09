@@ -37,7 +37,7 @@ func NewServerDeafult() *server {
 
 // Simple RPC
 func (s *server) AddOrder(ctx context.Context, req *pb.Order) (*wrapperspb.StringValue, error) {
-	time.Sleep(time.Second * 5)
+	// time.Sleep(time.Second * 5)
 	log.Printf("Order Added. ID : %v", req.Id)
 	s.orderMap[req.Id] = req
 	return &wrapperspb.StringValue{Value: "Order Added: " + req.Id}, nil

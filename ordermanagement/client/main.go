@@ -109,6 +109,8 @@ func main() {
 	go asncClientBidirectionalRPC(streamProcOrder, channel)
 	time.Sleep(time.Millisecond * 1000)
 
+	// cancel()
+
 	if err := streamProcOrder.Send(&wrapperspb.StringValue{Value: "101"}); err != nil {
 		log.Fatalf("%v.Send(%v) = %v", c, "101", err)
 	}
