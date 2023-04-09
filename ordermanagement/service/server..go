@@ -13,6 +13,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -40,6 +41,22 @@ func NewServerDeafult() *server {
 func (s *server) AddOrder(ctx context.Context, req *pb.Order) (*wrapperspb.StringValue, error) {
 	// time.Sleep(time.Second * 5)
 	log.Printf("Order Added. ID : %v", req.Id)
+
+	// 获取元数据
+	md, metadataAvailable := metadata.FromIncomingContext(ctx)
+	if metadataAvailable {
+		log.Printf("metadata: %v", md)
+		md.Append("server", "abs")
+	}
+
+	// 发送元数据
+	// header
+	header := metadata.Pairs("header-key", "val")
+	grpc.SendHeader(ctx, header)
+
+	// trailer
+	trailer := metadata.Pairs("trailer-key", "val")
+	grpc.SetTrailer(ctx, trailer)
 
 	if req.Id == "-1" {
 		log.Printf("Order ID is invalid! -> Received Order ID %s", req.Id)
@@ -75,6 +92,22 @@ func (s *server) GetOrder(ctx context.Context, req *wrapperspb.StringValue) (*pb
 
 // Server-side Streaming RPC
 func (s *server) SearchOrders(req *wrapperspb.StringValue, stream pb.OrderManagement_SearchOrdersServer) error {
+	// 获取元数据
+	md, metadataAvailable := metadata.FromIncomingContext(stream.Context())
+	if metadataAvailable {
+		log.Printf("metadata: %v", md)
+		md.Append("server", "abs")
+	}
+
+	// 发送元数据
+	// header
+	header := metadata.Pairs("header-key", "val")
+	stream.SendHeader(header)
+
+	// trailer
+	trailer := metadata.Pairs("trailer-key", "val")
+	stream.SetTrailer(trailer)
+
 	for key, order := range s.orderMap {
 		log.Print(key, order)
 		for _, itemStr := range order.Items {
