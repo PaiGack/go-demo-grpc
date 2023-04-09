@@ -7,8 +7,11 @@ import (
 	pb "ordermanagement/proto"
 	"time"
 
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -41,6 +44,27 @@ func main() {
 		log.Fatalf("Error Occured -> addOrder: %v", err)
 	}
 	log.Print("AddOrder Response -> ", res.Value)
+
+	order2 := pb.Order{Id: "-1", Items: []string{"iPhone XS", "Mac Book Pro"}, Destination: "San Jose, CA", Price: 2300.00}
+	res2, err := c.AddOrder(ctx, &order2)
+	if err != nil {
+		errorCode := status.Code(err)
+		if errorCode == codes.InvalidArgument {
+			log.Printf("Invalid Argument -> addOrder: %v", err)
+			errorStatus := status.Convert(err)
+			for _, d := range errorStatus.Details() {
+				switch info := d.(type) {
+				case *errdetails.BadRequest_FieldViolation:
+					log.Fatalf("Request Field Invalid: %s", info)
+				default:
+					log.Fatalf("Unexpected error type: %s", info)
+				}
+			}
+		} else {
+			log.Fatalf("Error Occured -> addOrder: %v", err)
+		}
+	}
+	log.Print("AddOrder Response -> ", res2.Value)
 
 	order, err := c.GetOrder(ctx, &wrapperspb.StringValue{Value: "101"})
 	if err != nil {

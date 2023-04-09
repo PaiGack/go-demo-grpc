@@ -10,6 +10,7 @@ import (
 
 	pb "ordermanagement/proto"
 
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -39,6 +40,23 @@ func NewServerDeafult() *server {
 func (s *server) AddOrder(ctx context.Context, req *pb.Order) (*wrapperspb.StringValue, error) {
 	// time.Sleep(time.Second * 5)
 	log.Printf("Order Added. ID : %v", req.Id)
+
+	if req.Id == "-1" {
+		log.Printf("Order ID is invalid! -> Received Order ID %s", req.Id)
+
+		errorStatus := status.New(codes.InvalidArgument, "Invalid information received")
+		ds, err := errorStatus.WithDetails(
+			&errdetails.BadRequest_FieldViolation{
+				Field:       "ID",
+				Description: fmt.Sprintf("Order ID received is not valid %s : %s", req.Id, req.Destination),
+			},
+		)
+		if err != nil {
+			return nil, errorStatus.Err()
+		}
+		return nil, ds.Err()
+	}
+
 	s.orderMap[req.Id] = req
 	return &wrapperspb.StringValue{Value: "Order Added: " + req.Id}, nil
 }
