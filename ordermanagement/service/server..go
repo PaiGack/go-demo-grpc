@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"strings"
+	"time"
 
 	pb "ordermanagement/proto"
 
@@ -143,6 +144,7 @@ func (s *server) ProcessOrders(stream pb.OrderManagement_ProcessOrdersServer) er
 	}
 }
 
+// 服务端一元拦截器
 func orderUnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	// 前置处理逻辑
 	// 通过检查传入的参数，获取关于当前 RPC 的信息
@@ -154,4 +156,37 @@ func orderUnaryServerInterceptor(ctx context.Context, req interface{}, info *grp
 	// 后置处理逻辑
 	log.Printf(" Post Proc Message: %s", m)
 	return m, err
+}
+
+// 服务端流拦截器
+// wrappedStream 包装嵌入 grpc.ServerStream
+// 并拦截对 RecvMsg 和 SendMsg 函数的调用
+type wrappedStream struct {
+	grpc.ServerStream
+}
+
+func (w *wrappedStream) RecvMsg(m interface{}) error {
+	log.Printf("===== [Server Stream Interceptor Wrapper] Receive a message (Type: %T) at %s", m, time.Now().Format(time.RFC3339))
+
+	return w.ServerStream.RecvMsg(m)
+}
+
+func (w *wrappedStream) SendMsg(m interface{}) error {
+	log.Printf("===== [Server Stream Interceptor Wrapper] Send a message (Type: %T) at %s", m, time.Now().Format(time.RFC3339))
+
+	return w.ServerStream.SendMsg(m)
+}
+
+func newWrappedStream(s grpc.ServerStream) grpc.ServerStream {
+	return &wrappedStream{s}
+}
+
+func orderServerStreamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	log.Println("===== [Server Stream Interceptor] ", info.FullMethod)
+
+	err := handler(srv, newWrappedStream(ss))
+	if err != nil {
+		log.Printf("RPC failed with error %v", err)
+	}
+	return err
 }
