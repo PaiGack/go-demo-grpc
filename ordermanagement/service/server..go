@@ -144,10 +144,14 @@ func (s *server) ProcessOrders(stream pb.OrderManagement_ProcessOrdersServer) er
 }
 
 func orderUnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	// 前置处理逻辑
+	// 通过检查传入的参数，获取关于当前 RPC 的信息
 	log.Println("====== [Server Interceptor] ", info.FullMethod)
 
+	// 调用 handler 完成一元 RPC 的正常执行
 	m, err := handler(ctx, req)
 
+	// 后置处理逻辑
 	log.Printf(" Post Proc Message: %s", m)
 	return m, err
 }
