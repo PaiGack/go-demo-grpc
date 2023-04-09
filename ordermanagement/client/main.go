@@ -36,10 +36,11 @@ func main() {
 
 	// Add Order
 	order1 := pb.Order{Id: "101", Items: []string{"iPhone XS", "Mac Book Pro"}, Destination: "San Jose, CA", Price: 2300.00}
-	res, _ := c.AddOrder(ctx, &order1)
-	if res != nil {
-		log.Print("AddOrder Response -> ", res.Value)
+	res, err := c.AddOrder(ctx, &order1)
+	if err != nil {
+		log.Fatalf("Error Occured -> addOrder: %v", err)
 	}
+	log.Print("AddOrder Response -> ", res.Value)
 
 	order, err := c.GetOrder(ctx, &wrapperspb.StringValue{Value: "101"})
 	if err != nil {
