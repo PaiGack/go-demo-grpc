@@ -21,6 +21,7 @@ func main() {
 		address,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithUnaryInterceptor(orderUnaryClientInterceptor),
+		grpc.WithStreamInterceptor(orderClientStreamInterceptor),
 	)
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
